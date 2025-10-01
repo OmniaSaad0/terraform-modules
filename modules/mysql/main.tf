@@ -6,8 +6,7 @@ resource "aws_instance" "mysql" {
   subnet_id              = var.subnet_id
   vpc_security_group_ids = var.security_group_ids
 
-  user_data = var.enable_user_data ? base64encode(
-    var.custom_user_data != "" ? var.custom_user_data : <<-EOF
+  user_data =  base64encode( <<-EOF
               #!/bin/bash
               sudo apt-get update
               sudo apt-get install -y mysql-server
