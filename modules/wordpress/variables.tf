@@ -1,53 +1,58 @@
-variable "region" {
-  description = "AWS region"
-  type        = string
-  default     = "us-west-1"
-}
-
 variable "name_prefix" {
   description = "Prefix for resource names"
   type        = string
-  default     = "wordpress-mysql"
 }
 
 variable "wordpress_ami" {
   description = "AMI ID for WordPress instances"
   type        = string
-  default     = "ami-0424788ce1ae8d5eb"
-}
-
-variable "mysql_ami" {
-  description = "AMI ID for MySQL instance"
-  type        = string
-  default     = "ami-0ddac4b9aed8d5d46"
 }
 
 variable "instance_type" {
-  description = "Instance type for EC2 instances"
+  description = "Instance type for WordPress instances"
   type        = string
   default     = "t3.small"
 }
 
 variable "key_name" {
-  description = "SSH key name for EC2 instances"
+  description = "SSH key name for WordPress instances"
   type        = string
-  default     = "omnia-key"
+}
+
+variable "security_group_id" {
+  description = "Security group ID for WordPress instances"
+  type        = string
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs for WordPress ASG"
+  type        = list(string)
+}
+
+variable "target_group_arns" {
+  description = "List of target group ARNs for the ASG"
+  type        = list(string)
+}
+
+variable "mysql_private_ip" {
+  description = "Private IP of the MySQL instance"
+  type        = string
 }
 
 variable "max_size" {
-  description = "Maximum number of WordPress instances"
+  description = "Maximum number of instances in the ASG"
   type        = number
   default     = 3
 }
 
 variable "min_size" {
-  description = "Minimum number of WordPress instances"
+  description = "Minimum number of instances in the ASG"
   type        = number
   default     = 1
 }
 
 variable "desired_capacity" {
-  description = "Desired number of WordPress instances"
+  description = "Desired number of instances in the ASG"
   type        = number
   default     = 2
 }
