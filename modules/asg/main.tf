@@ -1,58 +1,49 @@
-# WordPress Launch Template
-resource "aws_launch_template" "wordpress" {
-  name_prefix   = "${var.name_prefix}-wp-"
-  image_id      = var.wordpress_ami
+# Launch Template
+resource "aws_launch_template" "main" {
+  name_prefix   = "${var.name_prefix}-"
+  image_id      = var.ami
   instance_type = var.instance_type
   key_name      = var.key_name
 
-  vpc_security_group_ids = [var.security_group_id]
+  vpc_security_group_ids = var.security_group_ids
 
-  user_data = base64encode(<<-EOF
-              #!/bin/bash
-              # Update WordPress configuration with MySQL details
-              sed -i "s/define( 'DB_HOST', 'REPLACEME' );/define( 'DB_HOST', '${var.mysql_private_ip}' );/" /var/www/html/wp-config.php
-              sed -i "s/define( 'DB_NAME', 'REPLACEME' );/define( 'DB_NAME', '${var.database_name}' );/" /var/www/html/wp-config.php
-              sed -i "s/define( 'DB_USER', 'REPLACEME' );/define( 'DB_USER', '${var.database_user}' );/" /var/www/html/wp-config.php
-              sed -i "s/define( 'DB_PASSWORD', 'REPLACEME' );/define( 'DB_PASSWORD', '${var.database_password}' );/" /var/www/html/wp-config.php
-              
-              # Start Apache
-              systemctl start apache2
-              systemctl enable apache2
-              EOF
+  # User data is optional - only set if provided
+  user_data = var.user_data != null ? base64encode(var.user_data) : (
+    var.user_data_base64 != null ? var.user_data_base64 : null
   )
 
   tag_specifications {
     resource_type = "instance"
     tags = merge({
-      Name = "${var.name_prefix}-WordPress-Instance"
+      Name = "${var.name_prefix}-${var.instance_name}"
     }, var.additional_tags)
   }
 
   tags = merge({
-    Name = "${var.name_prefix}-WordPress-Template"
+    Name = "${var.name_prefix}-launch-template"
   }, var.additional_tags)
 }
 
 # Auto Scaling Group
-resource "aws_autoscaling_group" "wordpress_asg" {
-  name                = "${var.name_prefix}-wordpress-asg"
+resource "aws_autoscaling_group" "main" {
+  name                = "${var.name_prefix}-asg"
   vpc_zone_identifier = var.subnet_ids
   target_group_arns   = var.target_group_arns
-  health_check_type   = "ELB"
-  health_check_grace_period = 300
+  health_check_type   = var.health_check_type
+  health_check_grace_period = var.health_check_grace_period
 
   min_size         = var.min_size
   max_size         = var.max_size
   desired_capacity = var.desired_capacity
 
   launch_template {
-    id      = aws_launch_template.wordpress.id
+    id      = aws_launch_template.main.id
     version = "$Latest"
   }
 
   tag {
     key                 = "Name"
-    value               = "${var.name_prefix}-WordPress-ASG"
+    value               = "${var.name_prefix}-asg"
     propagate_at_launch = true
   }
 
@@ -66,8 +57,10 @@ resource "aws_autoscaling_group" "wordpress_asg" {
   }
 }
 
-# CloudWatch Alarm for Scale Out
+# CloudWatch Metric Alarm for Scale Out
 resource "aws_cloudwatch_metric_alarm" "cpu_high" {
+  count = var.enable_scaling_policies ? 1 : 0
+
   alarm_name          = "${var.name_prefix}-cpu-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -77,15 +70,17 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
   statistic           = "Average"
   threshold           = var.cpu_scale_out_threshold
   alarm_description   = "This metric monitors ec2 cpu utilization"
-  alarm_actions       = [aws_autoscaling_policy.scale_out.arn]
+  alarm_actions       = [aws_autoscaling_policy.scale_out[0].arn]
 
   dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.wordpress_asg.name
+    AutoScalingGroupName = aws_autoscaling_group.main.name
   }
 }
 
-# CloudWatch Alarm for Scale In
+# CloudWatch Metric Alarm for Scale In
 resource "aws_cloudwatch_metric_alarm" "cpu_low" {
+  count = var.enable_scaling_policies ? 1 : 0
+
   alarm_name          = "${var.name_prefix}-cpu-low"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = "2"
@@ -95,27 +90,31 @@ resource "aws_cloudwatch_metric_alarm" "cpu_low" {
   statistic           = "Average"
   threshold           = var.cpu_scale_in_threshold
   alarm_description   = "This metric monitors ec2 cpu utilization"
-  alarm_actions       = [aws_autoscaling_policy.scale_in.arn]
+  alarm_actions       = [aws_autoscaling_policy.scale_in[0].arn]
 
   dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.wordpress_asg.name
+    AutoScalingGroupName = aws_autoscaling_group.main.name
   }
 }
 
-# Auto Scaling Policy - Scale Out
+# Auto Scaling Policy for Scale Out
 resource "aws_autoscaling_policy" "scale_out" {
+  count = var.enable_scaling_policies ? 1 : 0
+
   name                   = "${var.name_prefix}-scale-out"
   scaling_adjustment     = 1
   adjustment_type        = "ChangeInCapacity"
   cooldown               = 300
-  autoscaling_group_name = aws_autoscaling_group.wordpress_asg.name
+  autoscaling_group_name = aws_autoscaling_group.main.name
 }
 
-# Auto Scaling Policy - Scale In
+# Auto Scaling Policy for Scale In
 resource "aws_autoscaling_policy" "scale_in" {
+  count = var.enable_scaling_policies ? 1 : 0
+
   name                   = "${var.name_prefix}-scale-in"
   scaling_adjustment     = -1
   adjustment_type        = "ChangeInCapacity"
   cooldown               = 300
-  autoscaling_group_name = aws_autoscaling_group.wordpress_asg.name
+  autoscaling_group_name = aws_autoscaling_group.main.name
 }

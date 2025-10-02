@@ -8,13 +8,21 @@ variable "region" {
   description = "AWS region to deploy the VPC"
 }
 
-variable "private_subnet" {
-  type = string
-  description = "CIDR block for private subnet"
+
+variable "project_name" {
+  type        = string
+  description = "Name of the project for resource naming"
+  default     = "wordpress-mysql"
 }
 
-variable "public_subnets" {
-  type = list(string)
-  description = "List of CIDR blocks for public subnets"
+variable "subnets_list" {
+  type = list(object({
+    name             = string
+    cidr             = string
+    availability_zone = string
+    type             = string  # "public" or "private"
+  }))
+  description = "List of subnets to create with their configuration"
+  
 }
 

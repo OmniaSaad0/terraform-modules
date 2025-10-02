@@ -1,32 +1,16 @@
 
-resource "aws_subnet" "public_subnet1" {
-    vpc_id = aws_vpc.my-vpc.id
-    cidr_block = var.public_subnets[0]
-    availability_zone = "${var.region}a"
-    map_public_ip_on_launch = true
-    tags = {
-        Name = "public-subnet-1"
-    } 
-}
-
-resource "aws_subnet" "public_subnet2" {
-    vpc_id = aws_vpc.my-vpc.id
-    cidr_block = var.public_subnets[1]
-    availability_zone = "${var.region}c"
-    map_public_ip_on_launch = true
-    tags = {
-        Name = "public-subnet-2"
-    } 
-}
-
-resource "aws_subnet" "private_subnet" {
-    vpc_id = aws_vpc.my-vpc.id
-    cidr_block = var.private_subnet
-    availability_zone = "${var.region}a"
-    map_public_ip_on_launch = false
-    tags = {
-        Name = "private-subnet"
-    }  
+resource "aws_subnet" "main" {
+  for_each = { for subnet in var.subnets_list : subnet.name => subnet }
+  
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = each.value.cidr
+  availability_zone       = each.value.availability_zone
+  map_public_ip_on_launch = each.value.type == "public" ? true : false
+  
+  tags = {
+    Name = each.value.name
+    Type = each.value.type
+  }
 }
 
 

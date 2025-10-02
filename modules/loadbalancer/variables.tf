@@ -3,6 +3,24 @@ variable "name_prefix" {
   type        = string
 }
 
+variable "load_balancer_name" {
+  description = "Name for the load balancer"
+  type        = string
+  default     = "alb"
+}
+
+variable "target_group_name" {
+  description = "Name for the target group"
+  type        = string
+  default     = "tg"
+}
+
+variable "internal" {
+  description = "Whether the load balancer is internal"
+  type        = bool
+  default     = false
+}
+
 variable "vpc_id" {
   description = "VPC ID for the load balancer"
   type        = string

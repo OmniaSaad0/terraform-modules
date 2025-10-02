@@ -1,23 +1,37 @@
+output "vpc_id" {
+  description = "ID of the VPC"
+  value       = aws_vpc.main.id
+}
+
 output "my_vpc" {
-  value = aws_vpc.my-vpc.id
-}
-
-output "public_subnet1_id" {
-  value = aws_subnet.public_subnet1.id
-}
-
-output "public_subnet2_id" {
-  value = aws_subnet.public_subnet2.id
+  description = "ID of the VPC (alias for vpc_id)"
+  value       = aws_vpc.main.id
 }
 
 output "public_subnet_ids" {
-  value = [aws_subnet.public_subnet1.id, aws_subnet.public_subnet2.id]
+  description = "List of IDs of public subnets"
+  value       = [for subnet in aws_subnet.main : subnet.id if subnet.tags.Type == "public"]
 }
 
-output "private_subnet_id" {
-  value = aws_subnet.private_subnet.id
+output "private_subnet_ids" {
+  description = "List of IDs of private subnets"
+  value       = [for subnet in aws_subnet.main : subnet.id if subnet.tags.Type == "private"]
 }
 
-output "vpc_id" {
-  value = aws_vpc.my-vpc.id
+
+output "all_subnet_ids" {
+  description = "List of IDs of all subnets"
+  value       = [for subnet in aws_subnet.main : subnet.id]
+}
+
+output "subnet_details" {
+  description = "Map of subnet details by name"
+  value = {
+    for name, subnet in aws_subnet.main : name => {
+      id               = subnet.id
+      cidr_block       = subnet.cidr_block
+      availability_zone = subnet.availability_zone
+      type             = subnet.tags.Type
+    }
+  }
 }

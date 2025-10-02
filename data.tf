@@ -5,7 +5,7 @@ data "aws_ami" "wordpress" {
 
   filter {
     name   = "name"
-    values = ["wordpress-*"]  
+    values = ["wordpress-ami"]  
   }
 
   filter {
